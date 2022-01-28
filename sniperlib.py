@@ -18,6 +18,8 @@ class Sniper:
         self.trades = common.load_trades() # List of trades(buy&sell txs)
         self.simulations = {} # List of running(and not running) simulations
         self.bootstrap_pending_trades() # The user can interrupt the bot while some transactions are pending. To not leave them hanging in later runs, this function's used.
+        self.base_gas_price = 0
+        Thread(target=self.fetch_base_gas_price, args=(5,)).start()
 
     def deploy(self):
         tx = self.factory.functions.deploy()
@@ -124,12 +126,12 @@ class Sniper:
             "value": value
         }
         if not self.network["eip1559"]:
-            result["gasPrice"] = gas_price if not adaptive_gas else gas_price+self.fetch_base_gas_price()
+            result["gasPrice"] = gas_price if not adaptive_gas else gas_price+self.base_gas_price
         else:
             if not adaptive_gas:
                 result["maxFeePerGas"] = gas_price
             else:
-                result["maxFeePerGas"] = gas_price+self.fetch_base_gas_price()
+                result["maxFeePerGas"] = gas_price+self.base_gas_price
             result["maxPriorityFeePerGas"] = gas_price
         return result
 
@@ -148,7 +150,16 @@ class Sniper:
                 path = [address, route, self.WETH]
         return path
 
-    def fetch_base_gas_price(self): return w3.eth.get_block('latest').baseFeePerGas if self.network["eip1559"] else w3.eth.gas_price     
+    def fetch_base_gas_price(self): 
+        while True:
+            try:
+                result = w3.eth.get_block('latest').baseFeePerGas if self.network["eip1559"] else w3.eth.gas_price
+                self.base_gas_price = result
+                log.info(f"Updated base gas, result: {result}")
+            except Exception as e:
+                log.warning(f"Failed to update base gas, error: {e}")
+            sleep(5)
+
     def get_token_balance(self, address): """Returns the token balance in the contract."""; return w3.eth.contract(address=address, abi=common.erc_abi).functions.balanceOf(common.main_contract).call()
     def decs(self, address): """Returns the token decimals."""; return w3.eth.contract(address=address, abi=common.erc_abi).functions.decimals().call()
     def bootstrap_pending_trades(self):
