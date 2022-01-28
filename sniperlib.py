@@ -19,7 +19,7 @@ class Sniper:
         self.simulations = {} # List of running(and not running) simulations
         self.bootstrap_pending_trades() # The user can interrupt the bot while some transactions are pending. To not leave them hanging in later runs, this function's used.
         self.base_gas_price = 0
-        Thread(target=self.fetch_base_gas_price, args=(5,)).start()
+        Thread(target=self.fetch_base_gas_price).start()
 
     def deploy(self):
         tx = self.factory.functions.deploy()
