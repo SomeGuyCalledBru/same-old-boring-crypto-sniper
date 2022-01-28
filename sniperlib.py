@@ -173,6 +173,7 @@ class Sniper:
 
     def update_trade(self, tx_hash, side): Thread(target=self._update_trade, args=(tx_hash, side)).start()
     def _update_trade(self, tx_hash, side):
+        # actually did this TODO wow
         # TODO: add a trade tracker to restart checker on startup
         if side == "buy":
             for i in range(len(self.trades["buy"])):
