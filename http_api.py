@@ -13,7 +13,6 @@ try:
 except Exception as e:
     print(f"CRITICAL: An error occurred during start-up. Message: {e}\n Make sure that your configuration is correct and you have necessary libraries installed.\nIf you're sure everything is right, open an issue over at GitHub")
 DECIMALS_CACHE = {}
-RELOADING = False
 PRIVATE_INFORMATION = ["privateKey", "telegramApi"]
 app = Flask(__name__)
 
