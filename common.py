@@ -1,6 +1,7 @@
 import json
 from log import log, generate_kwargs
 from web3 import Web3
+from web3.middleware import geth_poa_middleware
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
@@ -23,6 +24,7 @@ sniper_factory_abi = [	{		"inputs": [],		"stateMutability": "nonpayable",		"type
 sniper_main_abi = [	{		"inputs": [			{				"internalType": "address",				"name": "_new",				"type": "address"			}		],		"name": "changeOwner",		"outputs": [],		"stateMutability": "nonpayable",		"type": "function"	},	{		"inputs": [			{				"internalType": "address",				"name": "router",				"type": "address"			},			{				"internalType": "bytes",				"name": "data",				"type": "bytes"			},			{				"internalType": "address",				"name": "token0",				"type": "address"			},			{				"internalType": "address",				"name": "token1",				"type": "address"			},			{				"internalType": "bool",				"name": "isSell",				"type": "bool"			}		],		"name": "swap",		"outputs": [],		"stateMutability": "payable",		"type": "function"	},	{		"inputs": [],		"stateMutability": "nonpayable",		"type": "constructor"	},	{		"inputs": [			{				"internalType": "address",				"name": "token",				"type": "address"			}		],		"name": "withdraw",		"outputs": [],		"stateMutability": "nonpayable",		"type": "function"	},	{		"stateMutability": "payable",		"type": "receive"	}]
 simulator_abi = [	{		"inputs": [			{				"internalType": "address",				"name": "router",				"type": "address"			},			{				"internalType": "address[]",				"name": "path",				"type": "address[]"			},			{				"internalType": "address[]",				"name": "revPath",				"type": "address[]"			},			{				"internalType": "uint256",				"name": "slippageTolerance",				"type": "uint256"			}		],		"name": "checkNow",		"outputs": [],		"stateMutability": "payable",		"type": "function"	}]
 w3 = Web3(Web3.HTTPProvider(network_presets["networks"][config["network"]]["rpc"]) if not config["rpcUrl"] else config["rpcUrl"])
+w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 log.debug("Factory, self, main:")
 log.debug(network_presets["networks"][config["network"]]["main_contract"])
 log.debug(config["address"])
