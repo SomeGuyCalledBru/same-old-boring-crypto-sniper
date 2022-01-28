@@ -3,7 +3,7 @@ try:
     from threading import Thread
     from flask import Flask, request, Response, send_from_directory
     from web3 import Web3
-    from common import log
+    from common import log, generate_kwargs
     import common
     import json
     from sniperlib import sniper
@@ -13,6 +13,7 @@ try:
 except Exception as e:
     print(f"CRITICAL: An error occurred during start-up. Message: {e}\n Make sure that your configuration is correct and you have necessary libraries installed.\nIf you're sure everything is right, open an issue over at GitHub")
 DECIMALS_CACHE = {}
+PORT = 9545
 PRIVATE_INFORMATION = ["privateKey", "telegramApi"]
 app = Flask(__name__)
 
@@ -30,11 +31,13 @@ def networks():
 
 @app.route("/network")
 def network():
-    return json.dumps(common.config["network"])
+    result = common.config["network"]
+    return json.dumps(result)
 
 @app.route("/dex")
 def dex():
-    return json.dumps(common.config["dex"])
+    result = common.config["dex"]
+    return json.dumps(result)
 
 @app.route("/txReceipt/<hash>")
 def tx_receipt(hash):
@@ -153,7 +156,7 @@ def ping():
     Does nothing but serve as a ping endpoint.
     """
     if not common.w3.isConnected():
-        return Response('""', status=500)
+        return Response('""', status=418)
     return Response('""', status=200)
 
 @app.route("/kill", methods=["POST"])
@@ -162,8 +165,8 @@ def kill():
 
 def _kill():
     sleep(0.5)
-    os._exit(0)
+    os._exit(1)
 
 def init():
-    webbrowser.open_new_tab("http://127.0.0.1:9545")
-    app.run(host="127.0.0.1", port=9545)
+    webbrowser.open(f"http://127.0.0.1:{PORT}")
+    app.run(host="127.0.0.1", port=PORT)
