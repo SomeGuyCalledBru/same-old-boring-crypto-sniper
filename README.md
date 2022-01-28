@@ -2,11 +2,11 @@
 
 The title is enough of an explanation for what it is, I won't delve deeper in that.
 
-## How to run it?
-After installing the necessary libraries(web3, pyperclip, webbrowser, flask), run main.py. It will open a browser window where you can do your stuff.  
+## How do you run it?
+After installing the necessary libraries(web3, pyperclip, webbrowser, flask), run main.py. It will open a browser window where you can do your stuff.\
 Make sure TCP port 9545 is free on loopback.
 
-## What networks/chains are possible?
+## Which networks/chains are supported?
 ```
 Network -> DEx
 ropsten: uniswap
@@ -20,3 +20,8 @@ moonbeam_mainnet: solarflare, dustydunes, padswap, stellaswap
 ## Is there a cost to it?
 It's "free" to use, except that you have a 1% fee taken at every transaction.
 
+## I have an idea/issue to report!
+Open an issue in this repository. Issues are welcome if you put effort to it.
+
+## License?
+GPLv3.
