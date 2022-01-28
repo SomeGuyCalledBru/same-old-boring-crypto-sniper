@@ -1,0 +1,153 @@
+{
+    "networks": {
+        "ropsten": {
+            "name": "Ethereum Ropsten Testnet",
+            "rpc": "https://ropsten.infura.io/v3/d35879f884514335a3611cdeb7d9e17d",
+            "weth": "0xc778417E063141139Fce010982780140Aa0cD5Ab",
+            "main_contract": "0xEB26fb2D7ae8F9B91a05cb6014d48a977Ce596ae",
+            "hp_screener": "0x28Ab1631D58b55f38a157c38F7cd2d7A058f6F76",
+            "eip1559": true,
+            "explorer": "https://ropsten.etherscan.io",
+            "tick": "TETH"
+        },
+        "bsc_mainnet": {
+            "name": "BSC Mainnet",
+            "rpc": "https://bsc-dataseed3.defibit.io",
+            "weth": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+            "main_contract": "0x7A005441a855C05Ae2E85F297a8C1656a2ED48ec",
+            "hp_screener": "0xa4edB62C8Dcef79b3BB1deE9B90bc981eDA0a4f2",
+            "eip1559": false,
+            "explorer": "https://bscscan.com",
+            "tick": "BNB"
+        },
+        "ftm_mainnet": {
+            "name": "Fantom Mainnet",
+            "rpc": "https://rpc.ftm.tools",
+            "weth": "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83",
+            "main_contract": "0xEB26fb2D7ae8F9B91a05cb6014d48a977Ce596ae",
+            "hp_screener": "0xa8683fDF6Ef688A41dECC95b6274D25959B6ccC5",
+            "eip1559": false,
+            "explorer": "https://ftmscan.com",
+            "tick": "FTM"
+        },
+        "cronos_mainnet": {
+            "name": "Cronos Mainnet",
+            "rpc": "https://evm-cronos.crypto.org",
+            "weth": "0x5C7F8A570d578ED84E63fdFA7b1eE72dEae1AE23",
+            "main_contract": "0xEB26fb2D7ae8F9B91a05cb6014d48a977Ce596ae",
+            "hp_screener": "0xa8683fDF6Ef688A41dECC95b6274D25959B6ccC5",
+            "eip1559": false,
+            "explorer": "https://cronoscan.com",
+            "tick": "CRO"
+        },
+        "avax_mainnet": {
+            "name": "Avalanche Mainnet", 
+            "rpc": "https://api.avax.network/ext/bc/C/rpc",
+            "weth": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+            "main_contract": "0xEB26fb2D7ae8F9B91a05cb6014d48a977Ce596ae",
+            "hp_screener": "0xa8683fDF6Ef688A41dECC95b6274D25959B6ccC5",
+            "eip1559": true,
+            "explorer": "https://snowtrace.io",
+            "tick": "AVAX"
+        },
+        "moonbeam_mainnet": {
+            "name": "Moonbeam Mainnet",
+            "rpc": "https://rpc.api.moonbeam.network",
+            "weth": "0xAcc15dC74880C9944775448304B263D191c6077F",
+            "main_contract": "0xEB26fb2D7ae8F9B91a05cb6014d48a977Ce596ae",
+            "hp_screener": "0xa8683fDF6Ef688A41dECC95b6274D25959B6ccC5",
+            "eip1559": false,
+            "explorer": "https://blockscout.moonbeam.network",
+            "tick": "GLMR"
+        }
+    },
+    "dexes": {
+        "ropsten": {
+            "uniswap": {
+                "name": "Uniswap-Ropsten Testnet",
+                "router": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+                "encoder": "univ2"
+            }
+        },
+        "bsc_mainnet": {
+            "pancakeswap_v2": {
+                "name": "PancakeSwap(V2)",
+                "router": "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+                "encoder": "univ2"
+            },
+            "biswap": {
+                "name": "Biswap",
+                "router": "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8",
+                "encoder": "univ2"
+            }
+        },
+        "ftm_mainnet": {
+            "spiritswap": {
+                "name": "SpiritSwap",
+                "router": "0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52",
+                "encoder": "univ2"
+            },
+            "spookyswap": {
+                "name": "SpookySwap",
+                "router": "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
+                "encoder": "univ2"
+            }
+        },
+        "cronos_mainnet": {
+            "crodex": {
+                "name": "CroDex",
+                "router": "0xeC0A7a0C2439E8Cb67b992b12ecd020Ea943c7Be",
+                "encoder": "univ2"
+            },
+            "photonswap": {
+                "name": "PhotonSwap",
+                "router": "0x69004509291F4a4021fA169FafdCFc2d92aD02Aa",
+                "encoder": "univ2"
+            },
+            "cronical": {
+                "name": "Cronical DEX",
+                "router": "0x03c9c90fAD1c2b725eE5012642db8d68F58ECE11",
+                "encoder": "univ2"
+            },
+            "cronaswap": {
+                "name": "CronaSwap",
+                "router": "0xcd7d16fB918511BF7269eC4f48d61D79Fb26f918",
+                "encoder": "univ2"
+            }
+        },
+        "avax_mainnet": {
+            "traderjoe": {
+                "name": "Trader Joe",
+                "router": "0x60aE616a2155Ee3d9A68541Ba4544862310933d4",
+                "encoder": "univ2"
+            },
+            "pangolin": {
+                "name": "Pangolin Exchange",
+                "router": "0xE54Ca86531e17Ef3616d22Ca28b0D458b6C89106",
+                "encoder": "univ2"
+            }
+        },
+        "moonbeam_mainnet": {
+            "solarflare": {
+                "name": "Solarflare",
+                "router": "0xd3B02Ff30c218c7f7756BA14bcA075Bf7C2C951e",
+                "encoder": "univ2"
+            },
+            "stellaswap": {
+                "name": "StellaSwap",
+                "router": "0xd0A01ec574D1fC6652eDF79cb2F880fd47D34Ab1",
+                "encoder": "univ2"
+            },
+            "dustydunes": {
+                "name": "DustyDunes",
+                "router": "0x9A4A9059C051fCFD54af2c0cec439A42Ae9c15b8",
+                "encoder": "univ2"
+            },
+            "padswap": {
+                "name": "PadSwap",
+                "router": "0x40F1fEF0Fe68Fd10ff904070ee00a7769EE7fe34",
+                "encoder": "univ2"
+            }
+        }
+    }
+}
