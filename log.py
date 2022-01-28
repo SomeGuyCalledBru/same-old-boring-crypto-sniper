@@ -23,6 +23,9 @@ class CustomFormatter(logging.Formatter):
         log_fmt = self.FORMATS.get(record.levelno)
         formatter = logging.Formatter(log_fmt, "%Y-%m-%d|%H:%M:%S")
         return formatter.format(record)
+ 
+def generate_kwargs(**kwargs):
+    return f'   {"".join([f"{i}={kwargs[i]}" for i in kwargs])}'
 with open("config.json", "r") as f:
     config = json.load(f)
 log = logging.getLogger('my_module_name')
