@@ -4,7 +4,7 @@ The title is enough of an explanation for what it is, I won't delve deeper in th
 
 ## How to run it?
 After installing the necessary libraries(web3, pyperclip, webbrowser, flask), run main.py. It will open a browser window where you can do your stuff.  
-Make sure TCP port 19155 is free on loopback.
+Make sure TCP port 9545 is free on loopback.
 
 ## What networks/chains are possible?
 ```
