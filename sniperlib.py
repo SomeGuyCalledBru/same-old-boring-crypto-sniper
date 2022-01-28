@@ -52,7 +52,7 @@ class Sniper:
                 if self.simulations[address] == "Running": return
             except Exception:
                 pass
-            if len([i for i in self.simulations if i == "Running"]) >= 5:
+            if len([i for i in self.simulations if self.simulations[i] == "Running"]) >= 5:
                 return
             self.simulations[address] = "Running"
             while True:
@@ -64,6 +64,7 @@ class Sniper:
                 self.swap(address, "buy", amount_in=amount_in)
                 self.simulations[address] = "Succeeded!"
         except KeyError as e:
+            # Means trade was deleted
             if address in str(e):
                 pass
             else:
@@ -81,7 +82,7 @@ class Sniper:
             w3.eth.call({"from": self.config["address"], "to": self.simulator.address, "data": calldata, "value": self.config["amountUsed"]})
             return True
         except Exception as e:
-            log.warning(f"Exception in simulation, returning False: {e}")
+            log.warning(f"Exception in simulation, returning False: {e}{common.generate_kwargs(address=address)}")
             return False
 
     def swap(self, address, side, amount_in=None):
