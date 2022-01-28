@@ -1,5 +1,5 @@
 import json
-from log import log
+from log import log, generate_kwargs
 from web3 import Web3
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
