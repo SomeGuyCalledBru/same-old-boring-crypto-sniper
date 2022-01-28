@@ -104,22 +104,13 @@ class Sniper:
         built_transaction = contract_transaction.buildTransaction(tx_data)
         signed_transaction = w3.eth.account.sign_transaction(built_transaction, self.config["privateKey"])
         transaction_hash = Web3.toHex(w3.eth.sendRawTransaction(signed_transaction.rawTransaction))
-        if side == "buy":
-            self.trades["buy"].insert(0, {
-                "address": address,
-                "status": "Pending",
-                "tx": transaction_hash,
-                "amount_in": int(amount_in*99/100),
-                "amount_out": -1
-            })
-        elif side == "sell":
-            self.trades["sell"].insert(0, {
-                "address": address,
-                "status": "Pending",
-                "tx": transaction_hash,
-                "amount_in": amount_in,
-                "amount_out": -1
-            })
+        self.trades[side].insert(0, {
+            "address": address,
+            "status": "Pending",
+            "tx": transaction_hash,
+            "amount_in": amount_in,
+            "amount_out": -1
+        })
         self.set_trades()
         self.update_trade(transaction_hash, side)
         return transaction_hash
