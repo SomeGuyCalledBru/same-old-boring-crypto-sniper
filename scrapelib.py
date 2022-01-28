@@ -54,9 +54,9 @@ class Scraper:
                     if "add=" in main_message[i]:
                         log.debug("Ignoring as this is a dxsale link.")
                         continue
-                    if "dexscreener.com" in main_message[i]:
-                        log.debug("This is a Dexscreener link, attempting to parse address from LP")
-                        return Web3.toChecksumAddress(self.get_token_from_LP(Web3.toChecksumAddress(cut_off)))
+#                    if "dexscreener.com" in main_message[i]:
+#                        log.debug("This is a Dexscreener link, attempting to parse address from LP")
+#                        return Web3.toChecksumAddress(self.get_token_from_LP(Web3.toChecksumAddress(cut_off)))
                     if Web3.toChecksumAddress(cut_off) == "0x000000000000000000000000000000000000dEaD":
                         log.debug("Ignoring as this is the dead address.")
                         continue
