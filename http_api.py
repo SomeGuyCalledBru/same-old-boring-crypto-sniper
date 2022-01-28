@@ -165,5 +165,5 @@ def _kill():
     os._exit(0)
 
 def init():
-    webbrowser.open_new_tab("http://127.0.0.1:19155")
-    app.run(host="127.0.0.1", port=19155)
+    webbrowser.open_new_tab("http://127.0.0.1:9545")
+    app.run(host="127.0.0.1", port=9545)
