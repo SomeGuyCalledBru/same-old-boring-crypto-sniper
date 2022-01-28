@@ -1,0 +1,18 @@
+{
+    "privateKey": "0000000000000000000000000000000000000000000000000000000000000000",
+    "address": "0x0000000000000000000000000000000000000000",
+    "network": "bsc_mainnet",
+    "dex": "pancakeswap_v2", 
+    "amountUsed": 0.01,
+    "gas@buy": 1000000,
+    "gas@sell": 1000000,
+    "gasPrice@buy": 5,
+    "gasPrice@sell": 5,
+    "adaptiveGasStrategy": false,
+    "rpcUrl": "",
+    "simulationTaxLimitPercent": 50,
+    "intervalBetweenSimulationsMs": 500,
+    "telegramApi": [0, "this is your API hash, first one is your API ID"],
+    "telegramScrapedGroups": [],
+    "logSeverity": 20
+}
