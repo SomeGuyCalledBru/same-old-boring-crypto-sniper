@@ -16,5 +16,7 @@ avax_mainnet: traderjoe, pangolin
 cronos_mainnet: crodex, photonswap, cronical, cronoswap
 moonbeam_mainnet: solarflare, dustydunes, padswap, stellaswap
 ```
+## Is there a cost to it?
+It's "free" to use, except that you have a 1% fee taken at every transaction.
 
 ### There's a good bit more to document, but I'm too lazy to do them now
