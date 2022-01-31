@@ -4,7 +4,7 @@ The title is enough of an explanation for what it is, I won't delve deeper in th
 
 ## How do you run it?
 There are a few steps to the setup.  
-0. **Make sure you have Python 3.8 or greater installed!**
+**Make sure you have Python 3.8 or greater installed!**
 1. Install the necessary libraries(all are on pip): web3, pyperclip, webbrowser, flask.
 2. Open `config.json` and input your
     * address
