@@ -34,10 +34,5 @@ It's "free" to use, except that you have a 1% fee taken at every transaction.
 ## I have an idea/issue to report!
 Open an issue in this repository. Issues are welcome if you put effort to it.
 
-## Which versions/branches are there?
-  * `main`: Changes go live on the spot. Most unstable, but also the most up to date.
-  * `beta`: More polished versions of new features and versions. Still not stable enough for constant use.
-  * `stable`: Most polished and thoroughly tested version. Late to get features, but best for those that want reliability.
-
 ## License?
 GPLv3.
