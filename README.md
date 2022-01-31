@@ -10,7 +10,7 @@ There are a few steps to the setup.
     * address
     * private key
     * optionally telegram API details(If you won't use Telegram, leave the API ID at 0.)
-3. If you will use Telegram:
+3. If you will use Telegram, follow these steps on your first time using the bot:
     1. run `python main.py --mode telegram` after entering your API details on `config.json`
     2. enter your phone number, code that Telegram sent you, and 2FA password if applicable.
     3. After getting the `Successfully logged in as <you>` message on the terminal, close the window.
