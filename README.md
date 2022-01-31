@@ -3,8 +3,19 @@
 The title is enough of an explanation for what it is, I won't delve deeper in that.
 
 ## How do you run it?
-After installing the necessary libraries(web3, pyperclip, webbrowser, flask), run main.py. It will open a browser window where you can do your stuff.\
-Make sure TCP port 9545 is free on loopback.
+There are a few steps to the setup.
+0. **Make sure you have Python 3.8 or greater installed!**
+1. Install the necessary libraries(all are on pip): web3, pyperclip, webbrowser, flask.
+2. Open `config.json` and input your
+ * address
+ * private key
+ * optionally telegram API details(If you won't use Telegram, leave the API ID at 0.)
+3. If you will use Telegram:
+ 1. run `python main.py --mode telegram` after entering your API details on `config.json`
+ 2. enter your phone number, code that Telegram sent you, and 2FA password if applicable.
+ 3. After getting the `Successfully logged in as <you>` message on the terminal, close the window.
+4. Run `python main.py`, **without arguments**.
+That's it! You should now have a browser window where you can interact with the bot.
 
 ## Which networks/chains are supported?
 ```
