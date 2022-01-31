@@ -6,6 +6,7 @@ labels: ''
 assignees: ''
 
 ---
+**Make sure that you read the Readme before creating a report.**
 
 **Describe the bug**
 A description of what the bug is.
