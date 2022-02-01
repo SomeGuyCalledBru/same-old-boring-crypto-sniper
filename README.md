@@ -18,7 +18,13 @@ There are a few steps to the setup.
     2. enter your phone number, code that Telegram sent you, and 2FA password if applicable.
     3. After getting the `Successfully logged in as <you>` message on the terminal, close the window.
 4. Run `python main.py`, **without arguments**.
-That's it! You should now have a browser window where you can interact with the bot.
+5. To configure your settings(amount, gas, network and dex), go to the Settings tab in the browser tab that opens.
+---
+**NOTE**
+
+There are more settings than was said here-they are just not in the UI yet. To modify them, you can edit the JSON file manually.
+
+---
 
 ## Which networks/chains are supported?
 ```
