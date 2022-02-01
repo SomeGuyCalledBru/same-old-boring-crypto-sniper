@@ -1,6 +1,5 @@
 import logging
 
-
 try:
     import os, sys
     from threading import Thread
