@@ -2,6 +2,9 @@
 
 The title is enough of an explanation for what it is, I won't delve deeper in that.
 
+## Disclaimer
+It is your responsibility and choice that you're using this. You may lose money due to just crypto being crypto, or unexpected bugs. I won't be responsible in that case-nobody is forcing you to use this.
+
 ## How do you run it?
 There are a few steps to the setup.  
 **Make sure you have Python 3.8 or greater installed!**
