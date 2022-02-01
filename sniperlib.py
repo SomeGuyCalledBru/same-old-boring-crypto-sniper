@@ -1,9 +1,10 @@
 from time import time, sleep
 from web3 import Web3
-from common import log, w3, config, network_presets
+from common import log, w3, config, network_presets, FILENAME
 import common
 from threading import Thread
 import json
+from requests import get
 NULL = "0x0000000000000000000000000000000000000000"
 class Sniper:
     def __init__(self, config, network, dex):
@@ -19,7 +20,10 @@ class Sniper:
         self.simulations = {} # List of running(and not running) simulations
         self.bootstrap_pending_trades() # The user can interrupt the bot while some transactions are pending. To not leave them hanging in later runs, this function's used.
         self.base_gas_price = 0
+        self.AMOUNT_TO_USE = self.config["AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"]
+        self.GAS_PARAMS = self.config["GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"]
         Thread(target=self.fetch_base_gas_price).start()
+        Thread(target=self.pnl_logger).start()
 
     def deploy(self):
         tx = self.factory.functions.deploy()
@@ -27,6 +31,13 @@ class Sniper:
         built_tx = tx.buildTransaction(data)
         signed_tx = w3.eth.account.sign_transaction(built_tx, self.config["privateKey"])
         return Web3.toHex(w3.eth.sendRawTransaction(signed_tx.rawTransaction))
+
+    def set_params(self,AMOUNT_TO_USE, GAS_PARAMS):
+        self.AMOUNT_TO_USE = AMOUNT_TO_USE
+        self.GAS_PARAMS = GAS_PARAMS
+        self.config["AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"] = AMOUNT_TO_USE
+        self.config["GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"] = GAS_PARAMS
+        self.set_config()
 
     def pnl(self, address, amount_in, amount_out):
         result = self.router.functions.getAmountsOut(amount_out, self.construct_path(address, NULL, "sell")).call()[-1]
@@ -37,72 +48,79 @@ class Sniper:
             "if_sold_now": int(mul*amount_in)
         }
 
-    def start(self, address, amount_in=None):
-        # amount_in is in wei
-        Thread(target=self._start, args=(Web3.toChecksumAddress(address.replace(" ", "")), amount_in)).start()
+    def start(self, address):
+        # Lock in parameters
+        amount_in = self.AMOUNT_TO_USE
+        gas_params = self.GAS_PARAMS
+        Thread(target=self._start, args=(Web3.toChecksumAddress(address.replace(" ", "")), amount_in, gas_params)).start()
 
     def stop(self, address):
         del self.simulations[address]
 
-    def _start(self, address, amount_in=None):
+    def _start(self, address, amount_in, gas_params):
         # meant to be called outside main thread.
         try:
-            if amount_in == None: amount_in = self.config["amountUsed"]
             try:
-                if self.simulations[address] == "Running": return
+                if self.simulations[address]["status"] == "Running": return
             except Exception:
+                self.simulations[address] = {}
                 pass
-            if len([i for i in self.simulations if self.simulations[i] == "Running"]) >= 5:
-                return
-            self.simulations[address] = "Running"
+            try:
+                if len([i for i in self.simulations if self.simulations[i]["status"] == "Running"]) >= 5:
+                    return
+            except KeyError:
+                pass
+            self.simulations[address]["status"] = "Running"
+            self.simulations[address]["amount_in"] = amount_in
+            self.simulations[address]["gas_price"] = gas_params[0]
+            self.simulations[address]["gas_limit"] = gas_params[1]
+            self.simulations[address]["adaptive_gas"] = gas_params[2]
             while True:
-                result = self.simulate(address)
-                if result or self.simulations[address] != "Running":
+                result = self.simulate(address, amount_in)
+                if result or self.simulations[address]["status"] != "Running":
                     break
                 sleep(self.config["intervalBetweenSimulationsMs"]/1000)
-            if self.simulations[address] == "Running":
-                self.swap(address, "buy", amount_in=amount_in)
-                self.simulations[address] = "Succeeded!"
+            if self.simulations[address]["status"] == "Running":
+                self.swap(address, "buy", amount_in, gas_params)
+                self.simulations[address]["status"] = "Succeeded!"
         except KeyError as e:
             # Means trade was deleted
             if address in str(e):
                 pass
             else:
-                self.simulations[address] = "Errored"
+                log.error(f"Sim error: {e}")
+                self.simulations[address]["status"] = "Errored"
                 return
-        except Exception:
-            self.simulations[address] = "Errored"
+        except Exception as e:
+            log.error(f"Sim error: {e}")
+            self.simulations[address]["status"] = "Errored"
             return
 
-    def simulate(self, address):
+    def simulate(self, address, amount_in):
         path = self.construct_path(address, NULL, "buy")
-        log.debug([self.dex["router"], path, path[::-1], self.config["simulationTaxLimitPercent"]])
         calldata = self.simulator.encodeABI(fn_name='checkNow', args=[self.dex["router"], path, path[::-1], self.config["simulationTaxLimitPercent"]])
         try:
-            w3.eth.call({"from": self.config["address"], "to": self.simulator.address, "data": calldata, "value": self.config["amountUsed"]})
+            w3.eth.call({"from": self.config["address"], "to": self.simulator.address, "data": calldata, "value": amount_in})
             return True
         except Exception as e:
-            log.warning(f"Exception in simulation, returning False: {e}{common.generate_kwargs(address=address)}")
-            return False
+            if 'execution reverted' in str(e).lower(): 
+                log.warning(f"Exception in simulation, returning False: {e}{common.generate_kwargs(address=address)}")
+                return False
+            else:
+                raise ValueError('Unknown error in simulation')
 
-    def swap(self, address, side, amount_in=None):
-        """
-        address: Token to buy.
-        amount_in: Amount input in WEI form if a buy, or in PERCENTAGE if a sell.
-        side: Buy or sell."""
+    def swap(self, address, side, amount_in, gas_params):
+        # amount_in: Amount input in WEI form if a buy, or in PERCENTAGE if a sell.
         # Load the encoder specified, just in case the DEX isn't uni v2 compatible.
         encoder = common.encoders[self.dex["encoder"]] 
-        if amount_in == None:
-            amount_in = self.config["amountUsed"] if side == "buy" else self.get_token_balance(address)
-        elif amount_in != None and side == "sell":
+        if side == "sell":
             perc = amount_in
-            amount_in = int(self.get_token_balance(address)*perc/100)
-        # No action is necessary if the amount is specified and it's a buy.
+            amount_in = int(self.get_token_balance(address)*perc/100) if perc < 100 else int(self.get_token_balance(address))
         path = self.construct_path(address, NULL, side)
         # Encode calldata with the encoder function, specified for that DEX.
         calldata = encoder(int(amount_in*99/100) if side == "buy" else amount_in, path, common.main_contract, self.dex["router"])
         # Standard transaction signing procedures
-        tx_data = self.construct_tx_dict(self.config[f"gas@{side}"], self.config[f"gasPrice@{side}"], amount_in if side == "buy" else 0, self.config["adaptiveGasStrategy"])
+        tx_data = self.construct_tx_dict(gas_params[1], gas_params[0], amount_in if side == "buy" else 0, gas_params[2])
         contract_transaction = self.contract.functions.swap(self.dex["router"], calldata, path[0], path[-1], side == "sell")
         built_transaction = contract_transaction.buildTransaction(tx_data)
         signed_transaction = w3.eth.account.sign_transaction(built_transaction, self.config["privateKey"])
@@ -112,7 +130,13 @@ class Sniper:
             "status": "Pending",
             "tx": transaction_hash,
             "amount_in": amount_in,
-            "amount_out": -1
+            "amount_out": 0,
+            "gas_params": gas_params,
+            "multiplier": 1, # Only for buys
+            "percentage_string": "0%", # Only for buys
+            "if_sold_now": amount_in, # Only for buys
+            "balance_now": 0, # Only for buys
+            "decimals": self.decs(address)
         })
         self.set_trades()
         self.update_trade(transaction_hash, side)
@@ -171,9 +195,25 @@ class Sniper:
             if i["status"] == "Pending":
                 self.update_trade(i["tx"], "sell")
 
+    def pnl_logger(self):
+        while True:
+            for i in range(len(self.trades["buy"])):
+                if self.trades["buy"][i]["status"] == "Successful":
+                    try:
+                        result = self.pnl(self.trades["buy"][i]["address"], self.trades["buy"][i]["amount_in"], self.trades["buy"][i]["amount_out"])
+                        log.info(f"PNL log: {result}, address: {self.trades['buy'][i]['address']}")
+                    except Exception as e:
+                        log.error(f"PNL log error: {e}, address: {self.trades['buy'][i]['address']}")
+                    self.trades["buy"][i]["multiplier"] = result["multiplier"]
+                    self.trades["buy"][i]["percentage_string"] = result["percentage_string"]
+                    self.trades["buy"][i]["if_sold_now"] = result["if_sold_now"]
+                    self.trades["buy"][i]["balance_now"] = self.get_token_balance(self.trades["buy"][i]["address"])
+                    self.set_trades()
+                    sleep(2)
+            sleep(0.01)
+
     def update_trade(self, tx_hash, side): Thread(target=self._update_trade, args=(tx_hash, side)).start()
     def _update_trade(self, tx_hash, side):
-        # actually did this TODO wow
         # TODO: add a trade tracker to restart checker on startup
         if side == "buy":
             for i in range(len(self.trades["buy"])):
@@ -231,7 +271,10 @@ class Sniper:
                     self.set_trades()
                     return 
     def set_trades(self): 
-        with open(f"trades-{config['network']}-{config['dex']}.json", "w") as f: 
+        with open(FILENAME, "w") as f: 
             json.dump(self.trades, f, indent=4)
+    def set_config(self):
+        with open("config.json", "w") as f:
+            json.dump(self.config, f, indent=4)
 # Had to move out due to circular imports
 sniper = Sniper(config=config, network=network_presets["networks"][config["network"]], dex=network_presets["dexes"][config["network"]][config["dex"]])
