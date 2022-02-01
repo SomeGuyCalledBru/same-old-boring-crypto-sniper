@@ -57,7 +57,7 @@
             "main_contract": "0xEB26fb2D7ae8F9B91a05cb6014d48a977Ce596ae",
             "hp_screener": "0xa8683fDF6Ef688A41dECC95b6274D25959B6ccC5",
             "eip1559": false,
-            "explorer": "https://blockscout.moonbeam.network",
+            "explorer": "https://moonscan.io/",
             "tick": "GLMR"
         }
     },
