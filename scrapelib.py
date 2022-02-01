@@ -3,15 +3,22 @@ from threading import Thread
 from sniperlib import sniper
 from time import sleep
 from web3 import Web3
-from common import log
+from telethon import TelegramClient, events
+import asyncio
+from common import log, config
 class Scraper:
 
     def __init__(self) -> None:
         self.c = False
+        self.t = False
         Thread(target=self.clipboard).start()
+        Thread(target=self.telegram).start()
 
     def toggle_C(self):
         self.c = not self.c
+    
+    def toggle_T(self):
+        self.t = not self.t
     
     def clipboard(self):
         previous = ""
@@ -26,6 +33,24 @@ class Scraper:
                         sniper.start(address)
                     previous = current
             sleep(0.01)
+
+    def telegram(self):
+        try:
+            client = TelegramClient('anon', config["telegramApi"][0], config["telegramApi"][1], loop=asyncio.set_event_loop(asyncio.new_event_loop()))
+        except Exception as e:
+            log.warning("Invalid TG api creds! Disabling TG by crashing thread lol")
+            raise ValueError("Telegram API credentials invalid")
+        @client.on(events.NewMessage(chats=config["telegramScrapedGroups"]))
+        async def on_message(ctx):
+            if self.t:
+                addr = self.parse(ctx.raw_text)
+                if addr == None:
+                    log.warn("No CA found in message!")
+                    pass
+                else:
+                    sniper.start(addr)
+        client.start()
+        client.run_until_disconnected()
 
     def parse(self, string):
         string = str(string)
@@ -54,9 +79,9 @@ class Scraper:
                     if "add=" in main_message[i]:
                         log.debug("Ignoring as this is a dxsale link.")
                         continue
-#                    if "dexscreener.com" in main_message[i]:
-#                        log.debug("This is a Dexscreener link, attempting to parse address from LP")
-#                        return Web3.toChecksumAddress(self.get_token_from_LP(Web3.toChecksumAddress(cut_off)))
+                    # if "dexscreener.com" in main_message[i]:
+                    #     log.debug("This is a Dexscreener link, attempting to parse address from LP")
+                    #     return Web3.toChecksumAddress(self.get_token_from_LP(Web3.toChecksumAddress(cut_off)))
                     if Web3.toChecksumAddress(cut_off) == "0x000000000000000000000000000000000000dEaD":
                         log.debug("Ignoring as this is the dead address.")
                         continue
