@@ -23,15 +23,16 @@ class CustomFormatter(logging.Formatter):
         log_fmt = self.FORMATS.get(record.levelno)
         formatter = logging.Formatter(log_fmt, "%Y-%m-%d|%H:%M:%S")
         return formatter.format(record)
+        
 with open("config.json", "r") as f:
     config = json.load(f)
 
 def generate_kwargs(**kwargs):
     return f'   {"".join([f"{i}={kwargs[i]}" for i in kwargs])}'
 log = logging.getLogger('my_module_name')
-log.setLevel(config["logSeverity"])
+log.setLevel(10)
 ch = logging.StreamHandler()
-ch.setLevel(config["logSeverity"])
+ch.setLevel(10)
 ch.setFormatter(CustomFormatter())
 log.addHandler(ch)
 fh = logging.FileHandler('debug.log')
