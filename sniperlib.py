@@ -4,7 +4,6 @@ from common import log, w3, config, network_presets, FILENAME
 import common
 from threading import Thread
 import json
-from requests import get
 NULL = "0x0000000000000000000000000000000000000000"
 class Sniper:
     def __init__(self, config, network, dex):
@@ -20,8 +19,8 @@ class Sniper:
         self.simulations = {} # List of running(and not running) simulations
         self.bootstrap_pending_trades() # The user can interrupt the bot while some transactions are pending. To not leave them hanging in later runs, this function's used.
         self.base_gas_price = 0
-        self.AMOUNT_TO_USE = self.config["AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"]
-        self.GAS_PARAMS = self.config["GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"]
+        self.AMOUNT_TO_USE = self.config["AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"][self.config["network"]]
+        self.GAS_PARAMS = self.config["GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"][self.config["network"]]
         Thread(target=self.fetch_base_gas_price).start()
         Thread(target=self.pnl_logger).start()
 
@@ -35,8 +34,8 @@ class Sniper:
     def set_params(self,AMOUNT_TO_USE, GAS_PARAMS):
         self.AMOUNT_TO_USE = AMOUNT_TO_USE
         self.GAS_PARAMS = GAS_PARAMS
-        self.config["AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"] = AMOUNT_TO_USE
-        self.config["GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"] = GAS_PARAMS
+        self.config["AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"][self.config["network"]] = AMOUNT_TO_USE
+        self.config["GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"][self.config["network"]] = GAS_PARAMS
         self.set_config()
 
     def pnl(self, address, amount_in, amount_out):
@@ -48,16 +47,16 @@ class Sniper:
             "if_sold_now": int(mul*amount_in)
         }
 
-    def start(self, address):
+    def start(self, address, initiator="Unspecified"):
         # Lock in parameters
         amount_in = self.AMOUNT_TO_USE
         gas_params = self.GAS_PARAMS
-        Thread(target=self._start, args=(Web3.toChecksumAddress(address.replace(" ", "")), amount_in, gas_params)).start()
+        Thread(target=self._start, args=(Web3.toChecksumAddress(address.replace(" ", "")), amount_in, gas_params, initiator)).start()
 
     def stop(self, address):
         del self.simulations[address]
 
-    def _start(self, address, amount_in, gas_params):
+    def _start(self, address, amount_in, gas_params, initiator):
         # meant to be called outside main thread.
         try:
             try:
@@ -75,13 +74,14 @@ class Sniper:
             self.simulations[address]["gas_price"] = gas_params[0]
             self.simulations[address]["gas_limit"] = gas_params[1]
             self.simulations[address]["adaptive_gas"] = gas_params[2]
+            self.simulations[address]["initiator"] = initiator
             while True:
                 result = self.simulate(address, amount_in)
                 if result or self.simulations[address]["status"] != "Running":
                     break
                 sleep(self.config["intervalBetweenSimulationsMs"]/1000)
             if self.simulations[address]["status"] == "Running":
-                self.swap(address, "buy", amount_in, gas_params)
+                self.swap(address, "buy", amount_in, gas_params, initiator=initiator)
                 self.simulations[address]["status"] = "Succeeded!"
         except KeyError as e:
             # Means trade was deleted
@@ -109,7 +109,7 @@ class Sniper:
             else:
                 raise ValueError('Unknown error in simulation')
 
-    def swap(self, address, side, amount_in, gas_params):
+    def swap(self, address, side, amount_in, gas_params, initiator="Unspecified"):
         # amount_in: Amount input in WEI form if a buy, or in PERCENTAGE if a sell.
         # Load the encoder specified, just in case the DEX isn't uni v2 compatible.
         encoder = common.encoders[self.dex["encoder"]] 
@@ -136,7 +136,9 @@ class Sniper:
             "percentage_string": "0%", # Only for buys
             "if_sold_now": amount_in, # Only for buys
             "balance_now": 0, # Only for buys
-            "decimals": self.decs(address)
+            "decimals": self.decs(address),
+            "initiator": initiator,
+            "limit_orders": []
         })
         self.set_trades()
         self.update_trade(transaction_hash, side)
@@ -175,6 +177,48 @@ class Sniper:
                 path = [address, route, self.WETH]
         return path
 
+    def restore_buy(self, address, tx):
+        if tx!=None and tx!="null" and tx!="undefined" and tx!="":
+            try:
+                receipt = w3.eth.get_transaction(tx)
+            except Exception:
+                # handle tx absence at update_trade()
+                receipt = {"value": 0}
+            self.trades["buy"].insert(0, {
+                "address": address,
+                "status": "Pending",
+                "tx": tx,
+                "amount_in": receipt["value"],
+                "amount_out": 0,
+                "gas_params": ["unknown", "unknown", "unknown"],
+                "multiplier": 1, # Only for buys
+                "percentage_string": "0%", # Only for buys
+                "if_sold_now": receipt["value"], # Only for buys
+                "balance_now": 0, # Only for buys
+                "decimals": self.decs(address),
+                "initiator": "unknown(trade restored with TxHash)",
+                "limit_orders": []
+            })
+            self.set_trades()
+            self.update_trade(tx, "buy")
+        else:
+            self.trades["buy"].insert(0, {
+                "address": address,
+                "status": "Successful",
+                "tx": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "amount_in": 0,
+                "amount_out": 0,
+                "gas_params": ["unknown", "unknown", "unknown"],
+                "multiplier": "---", # Only for buys
+                "percentage_string": "---%", # Only for buys
+                "if_sold_now": 0, # Only for buys
+                "balance_now": 0, # Only for buys
+                "decimals": self.decs(address),
+                "initiator": "unknown(trade restored without TxHash)",
+                "limit_orders": []
+            })
+            self.set_trades()
+
     def fetch_base_gas_price(self): 
         while True:
             try:
@@ -198,20 +242,38 @@ class Sniper:
     def pnl_logger(self):
         while True:
             for i in range(len(self.trades["buy"])):
-                if self.trades["buy"][i]["status"] == "Successful":
-                    try:
-                        result = self.pnl(self.trades["buy"][i]["address"], self.trades["buy"][i]["amount_in"], self.trades["buy"][i]["amount_out"])
-                        log.info(f"PNL log: {result}, address: {self.trades['buy'][i]['address']}")
-                    except Exception as e:
-                        log.error(f"PNL log error: {e}, address: {self.trades['buy'][i]['address']}")
-                    self.trades["buy"][i]["multiplier"] = result["multiplier"]
-                    self.trades["buy"][i]["percentage_string"] = result["percentage_string"]
-                    self.trades["buy"][i]["if_sold_now"] = result["if_sold_now"]
-                    self.trades["buy"][i]["balance_now"] = self.get_token_balance(self.trades["buy"][i]["address"])
-                    self.set_trades()
-                    sleep(2)
+                try:
+                    if self.trades["buy"][i]["status"] == "Successful" and self.trades["buy"][i]["amount_in"] > 0: # last condition is to skip restored tx
+                        try:
+                            result = self.pnl(self.trades["buy"][i]["address"], self.trades["buy"][i]["amount_in"], self.trades["buy"][i]["amount_out"])
+                            log.info(f"PNL log: {result}, address: {self.trades['buy'][i]['address']}")
+                            self.trades["buy"][i]["multiplier"] = result["multiplier"]
+                            self.trades["buy"][i]["percentage_string"] = result["percentage_string"]
+                            self.trades["buy"][i]["if_sold_now"] = result["if_sold_now"]
+                            self.trades["buy"][i]["balance_now"] = self.get_token_balance(self.trades["buy"][i]["address"])
+                            for limit_index, limit_order in enumerate(self.trades["buy"][i]["limit_orders"]):
+                                if limit_order["trigger"] > 1 and result["multiplier"] > limit_order["trigger"]:
+                                    self.swap(self.trades['buy'][i]['address'], "sell", limit_order["percentage"], self.GAS_PARAMS, initiator="limit sell(TP)")
+                                    self.delete_limit(i, limit_index)
+                                elif limit_order["trigger"] < 1 and result["multiplier"] < limit_order["trigger"]:
+                                    self.swap(self.trades['buy'][i]['address'], "sell", limit_order["percentage"], self.GAS_PARAMS, initiator="limit sell(SL)")
+                                    self.delete_limit(i, limit_index)
+                            self.set_trades()
+                        except Exception as e:
+                            log.error(f"PNL log error: {e}")
+                        sleep(2)
+                    elif self.trades["buy"][i]["status"] == "Successful" and self.trades["buy"][i]["amount_in"] == 0:
+                        self.trades["buy"][i]["balance_now"] = self.get_token_balance(self.trades["buy"][i]["address"])
+                        self.set_trades()
+                        sleep(1)
+                except IndexError:
+                    log.warning("Trade deleted while getting PNL!")
+                    break
+                    
             sleep(0.01)
-
+            
+    def delete_limit(self, trade_index, limit_index): del self.trades["buy"][trade_index]["limit_orders"][limit_index]
+    def set_limit(self, trade_index, multiplier, percentage): self.trades["buy"][trade_index]["limit_orders"].insert(0, {'trigger': multiplier, 'percentage': percentage})
     def update_trade(self, tx_hash, side): Thread(target=self._update_trade, args=(tx_hash, side)).start()
     def _update_trade(self, tx_hash, side):
         # TODO: add a trade tracker to restart checker on startup
@@ -228,6 +290,15 @@ class Sniper:
                         self.trades["buy"][i]["status"] = "Failed"
                         self.set_trades()
                         return
+                    
+                    # Update value to actual value
+                    while True:
+                        try:
+                            self.trades["buy"][i]["amount_in"] = w3.eth.get_transaction(tx_hash)["value"]
+                            break
+                        except Exception:
+                            sleep(1)
+                    
                     # If we succeeded, we can move on.
                     logs = token_contract.events.Transfer().processReceipt(tx_receipt)
                     totalOutput = 0
@@ -270,6 +341,7 @@ class Sniper:
                     self.trades["sell"][i]["amount_out"] = totalOutput
                     self.set_trades()
                     return 
+
     def set_trades(self): 
         with open(FILENAME, "w") as f: 
             json.dump(self.trades, f, indent=4)
