@@ -11,10 +11,44 @@
     "telegramScrapedGroups": [],
     "simulationTaxLimitPercent": 50,
     "intervalBetweenSimulationsMs": 500,
-    "AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT": 10000000000000000,
-    "GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT": [
-        3000000000,
-        1000000,
-        true
-    ]
+    "AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT": {
+        "ropsten": 10000000000000000,
+        "bsc_mainnet": 10000000000000000,
+        "ftm_mainnet": 5000000000000000000,
+        "cronos_mainnet": 5000000000000000000,
+        "avax_mainnet": 50000000000000000,
+        "moonbeam_mainnet": 1000000000000000000
+    },
+    "GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT": {
+        "ropsten": [
+            10000000000,
+            1000000,
+            true
+        ],
+        "bsc_mainnet": [
+            5000000000,
+            1000000,
+            true
+        ],
+        "ftm_mainnet": [
+            100000000000,
+            1000000,
+            true
+        ],
+        "cronos_mainnet": [
+            100000000000,
+            1000000,
+            true
+        ],
+        "avax_mainnet": [
+            10000000000,
+            1000000,
+            true
+        ],
+        "moonbeam_mainnet": [
+            20000000000,
+            1000000,
+            true
+        ]
+    }
 }
