@@ -1,4 +1,6 @@
+from audioop import mul
 import logging
+
 
 try:
     import os, sys
@@ -108,7 +110,6 @@ def get_params():
         "amountUsed": sniper.AMOUNT_TO_USE,
         "gasParams": sniper.GAS_PARAMS
     })
-    
 
 @app.route("/setParams", methods=["POST"])
 def set_params():
@@ -137,9 +138,20 @@ def delete_trade(side, index):
     sniper.set_trades()
     return '""'
 
+@app.route("/restoreBuy/<address>", methods=["POST"])
+def restore_buy(address):
+    address = Web3.toChecksumAddress(address.replace(' ', ''))
+    tx = request.args.get('tx').replace(' ', '')
+    for i in sniper.trades["buy"]:
+        log.debug(f"{i['tx']}, {tx}")
+        if i["tx"] == tx and tx.startswith('0x'):
+            return Response('"Tx already exists"', status=400)
+    sniper.restore_buy(address, tx)
+    return '""'
+
 @app.route("/startSimulating/<address>", methods=["POST"])
 def start_simulating(address):
-    sniper.start(address)
+    sniper.start(address, "manual input")
     return Response('""', status=202)
 
 @app.route("/stopSimulating/<address>", methods=["POST"])
@@ -164,7 +176,7 @@ def buy():
     """
     if not request.args.get("address"):
         return '"Invalid request: required params missing"'
-    return json.dumps(str(sniper.swap(Web3.toChecksumAddress(request.args.get("address").replace(" ", "")), "buy", Web3.toWei(sniper.AMOUNT_TO_USE, 'ether'), sniper.GAS_PARAMS)))
+    return json.dumps(str(sniper.swap(Web3.toChecksumAddress(request.args.get("address").replace(" ", "")), "buy", Web3.toWei(sniper.AMOUNT_TO_USE, 'ether'), sniper.GAS_PARAMS, initiator="manual buy")))
 
 @app.route("/sell", methods=["POST"])
 def sell():
@@ -175,7 +187,7 @@ def sell():
     """
     if not request.args.get("address"):
         return '"Invalid request: required params missing"'
-    return json.dumps(str(sniper.swap(Web3.toChecksumAddress(request.args.get("address").replace(" ", "")), "sell", request.args.get("amount_in", type=float), sniper.GAS_PARAMS)))
+    return json.dumps(str(sniper.swap(Web3.toChecksumAddress(request.args.get("address").replace(" ", "")), "sell", request.args.get("amount_in", type=float), sniper.GAS_PARAMS, initiator="manual sell")))
 
 @app.route("/pnl", methods=["GET"])
 def pnl():
@@ -194,6 +206,7 @@ def ping():
 def kill():
     Thread(target=_kill).start()
     subprocess.Popen(["python", "main.py", "1"], close_fds=True)
+    return Response('""', status=202)
 
 @app.route("/set_ND", methods=["POST"])
 def set_network_and_dex():
