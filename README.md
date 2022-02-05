@@ -7,6 +7,7 @@ It is your responsibility and choice that you're using this. You may lose money 
 
 ## How do you run it?
 There are a few steps to the setup.  
+**This was only tested on Windows-unexpected issues can pop up with other OSes. Beware.**  
 **Make sure you have Python 3.8 or greater installed!**
 1. Install the necessary libraries(all are on pip): web3, pyperclip, webbrowser, flask.
 2. Open `config.json` and input your
