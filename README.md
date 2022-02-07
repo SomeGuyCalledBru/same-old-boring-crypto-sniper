@@ -27,7 +27,8 @@ There are a few steps to the setup.
 * If you've known any programming language for more than a few seconds, 
 you may have noticed that the section that is open-sourced is 
 basically just a web server, thus you might
-feel intrigued to open it up to the world. **Don't!** Not only is it a security nightmare that gives people control over
+feel intrigued to open it up to the world to use this remotely.
+**Don't!** Not only is it a security nightmare that gives people control over
 your wallet, it's just not designed to run that way.
 
 ---
