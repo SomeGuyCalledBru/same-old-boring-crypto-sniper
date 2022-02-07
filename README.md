@@ -21,9 +21,14 @@ There are a few steps to the setup.
 4. Run `python main.py`, **without arguments**.
 5. To configure your settings(amount, gas, network and dex), go to the Settings tab in the browser tab that opens.
 ---
-**NOTE**
+**NOTES**
 
-There are more settings than was said here-they are just not in the UI yet. To modify them, you can edit the JSON file manually.
+* There are more settings than was said here-they are just not in the UI yet. To modify them, you can edit the JSON file manually.
+* If you've known any programming language for more than a few seconds, 
+you may have noticed that the section that is open-sourced is 
+basically just a web server, thus you might
+feel intrigued to open it up to the world. **Don't!** Not only is it a security nightmare that gives people control over
+your wallet, it's just not designed to run that way.
 
 ---
 
