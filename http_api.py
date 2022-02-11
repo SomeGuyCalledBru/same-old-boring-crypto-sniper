@@ -1,4 +1,6 @@
 import logging
+from traceback import format_exc
+
 try:
     import os, sys
     from threading import Thread
@@ -12,7 +14,7 @@ try:
     import subprocess
     import scrapelib
 except Exception as e:
-    print(f"CRITICAL: An error occurred during start-up. Message: {e}\n Make sure that your configuration is correct and you have necessary libraries installed.\nIf you're sure everything is right, open an issue over at GitHub")
+    print(f"CRITICAL: An error occurred during start-up. Message: \n{format_exc()}\n Make sure that your configuration is correct and you have necessary libraries installed.\nIf you're sure everything is right, open an issue over at GitHub")
 DECIMALS_CACHE = {}
 PARAMS_CONVERTED = False
 PORT = 9545
@@ -124,6 +126,40 @@ def set_params():
     sniper.set_params(AMOUNT_TO_USE, GAS_PARAMS)
     return '""'
 
+@app.route("/setMisc", methods=["POST"])
+def set_misc():
+    # PARAMS:
+    # method: The method to use. Can be "set", "append", "index" or "remove"(defaults to "set") 
+    # key: The key to modify
+    # value: The value to set(required if method is "set" or "append")
+    # index: The index to modify(required if method is "index")
+
+    if request.args.get("method") in [None, "set"]:
+        value_type = str if not is_number(request.args.get("value")) else int if float(request.args.get("value")) % 1 == 0 else float 
+        common.config[request.args.get("key")] = request.args.get('value', type=value_type)
+        common.set_config()
+        return '""'
+    elif request.args.get("method") == "append":
+        common.config[request.args.get("key")].append("")
+        common.set_config()
+        return '""'
+    elif request.args.get("method") == "index":
+        value_type = str if not is_number(request.args.get("value")) else int if float(request.args.get("value")) % 1 == 0 else float 
+        index_type = str if not is_number(request.args.get("index")) else int if float(request.args.get("index")) % 1 == 0 else float 
+        common.config[request.args.get("key")][request.args.get("index", type=index_type)] = request.args.get("value", type=value_type)
+        common.set_config()
+        return '""'
+    elif request.args.get("method") == "remove":
+        if request.args.get("index") != None:
+            index_type = str if not is_number(request.args.get("index")) else int if float(request.args.get("index")) % 1 == 0 else float 
+            del common.config[request.args.get("key")][request.args.get("index", type=index_type)]
+        else:
+            del common.config[request.args.get("key")]
+        common.set_config()
+        return '""'
+    else:
+        return Response('"Invalid instruction"', status=400)
+    
 
 @app.route("/deploy", methods=["POST"])
 def deploy():
@@ -131,19 +167,22 @@ def deploy():
 
 @app.route("/deleteTrade/<side>/<index>", methods=["POST"])
 def delete_trade(side, index):
-    del sniper.trades[side][int(index)]
-    sniper.set_trades()
+    sniper.delete_trade(side, int(index))
     return '""'
 
-@app.route("/restoreBuy/<address>", methods=["POST"])
-def restore_buy(address):
+@app.route("/createLimitOrder/<index>/<price>/<amount>", methods=["POST"])
+def create_limit_order(index, price, amount):
+    return json.dumps(sniper.set_limit(int(index), float(price), float(amount)))
+
+@app.route("/deleteLimitOrder/<trade_index>/<limit_index>", methods=["POST"])
+def delete_limit_order(trade_index, limit_index):
+    sniper.delete_limit(int(trade_index), int(limit_index))
+    return '""'
+
+@app.route("/restoreTrade/<address>", methods=["POST"])
+def restore_trade(address):
     address = Web3.toChecksumAddress(address.replace(' ', ''))
-    tx = request.args.get('tx').replace(' ', '')
-    for i in sniper.trades["buy"]:
-        log.debug(f"{i['tx']}, {tx}")
-        if i["tx"] == tx and tx.startswith('0x'):
-            return Response('"Tx already exists"', status=400)
-    sniper.restore_buy(address, tx)
+    sniper.restore_trade(address)
     return '""'
 
 @app.route("/startSimulating/<address>", methods=["POST"])
@@ -218,10 +257,22 @@ def set_network_and_dex():
 def pnf(error):
     return f'Literally nothing to see here!', 404
 
-@app.errorhandler(500)
-def ise(error):
-    return Response(f'"Whoops, you got us bad. Something must not have happened but it happened anyway. Error: {error}"', status=500)
+@app.errorhandler(429)
+def too_many_requests(error):
+    return Response('"Too many requests"', status=429)
 
+@app.errorhandler(500)
+def internal_server_error(error):
+    return Response(f'"Internal server error: {error}"', status=500)
+
+# Check if is number
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+        
 def _kill():
     sleep(0.1)
     log.debug("Rekting")

@@ -30,7 +30,7 @@ class Scraper:
                 if previous != current:
                     address = self.parse(current)
                     if address != None and address != "":
-                        sniper.start(address)
+                        sniper.start(address, "clipboard scraper")
                     previous = current
             sleep(0.01)
 
@@ -48,7 +48,7 @@ class Scraper:
                     log.warn("No CA found in message!")
                     pass
                 else:
-                    sniper.start(addr)
+                    sniper.start(addr, "Telegram scraper")
         client.start()
         client.run_until_disconnected()
 
@@ -89,5 +89,5 @@ class Scraper:
                     log.debug("Invalid ETH-type address")
                     continue
                 return Web3.toChecksumAddress(cut_off)
-
+# Create scraper instance
 scraper = Scraper()
