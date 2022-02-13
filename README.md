@@ -31,6 +31,9 @@ your wallet, it's just not designed to run that way.
 
 ---
 
+## Is there a cost to it?
+You pay as you use with a 1% fee on every transaction you do.
+
 ## Which networks/chains are supported?
 ```
 Network -> DEx
@@ -41,9 +44,6 @@ avax_mainnet: traderjoe, pangolin
 cronos_mainnet: crodex, photonswap, cronical, cronoswap
 moonbeam_mainnet: solarflare, dustydunes, padswap, stellaswap
 ```
-
-## Is there a cost to it?
-It's "free" to use, except that you have a 1% fee taken at every transaction.
 
 ## I have an idea/issue to report!
 Open an issue in this repository. Issues are welcome if you put effort to it.
