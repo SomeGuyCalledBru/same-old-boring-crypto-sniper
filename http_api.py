@@ -1,17 +1,13 @@
-import logging
-from traceback import format_exc
-
 try:
-    import os, sys
+    from traceback import format_exc
+    import os, shutil, signal, subprocess, webbrowser
     from threading import Thread
     from flask import Flask, request, Response, send_from_directory
     from web3 import Web3
     import json
-    import webbrowser
-    from time import time, sleep
+    from time import sleep
     import common
     import sniperlib
-    import subprocess
     import scrapelib
 except Exception as e:
     print(f"CRITICAL: An error occurred during start-up. Message: \n{format_exc()}\n Make sure that your configuration is correct and you have necessary libraries installed.\nIf you're sure everything is right, open an issue over at GitHub")
@@ -70,7 +66,7 @@ def is_tg_configured():
 def is_deployed():
     return json.dumps(common.main_contract != "0x0000000000000000000000000000000000000000")
 
-@app.route("/simulate/<address>")
+@app.route("/simulate/<address>")   
 def simulate(address):
     return json.dumps(sniper.simulate(address, sniper.AMOUNT_TO_USE))
 
@@ -106,8 +102,8 @@ def base_gas():
 @app.route("/getParams")
 def get_params():
     return json.dumps({
-        "amountUsed": sniper.AMOUNT_TO_USE,
-        "gasParams": sniper.GAS_PARAMS
+        "amountUsed": sniper.config["AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"][sniper.config["network"]],
+        "gasParams": sniper.config["GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"][sniper.config["network"]]
     })
 
 @app.route("/setParams", methods=["POST"])
@@ -133,28 +129,39 @@ def set_misc():
     # key: The key to modify
     # value: The value to set(required if method is "set" or "append")
     # index: The index to modify(required if method is "index")
+    # instant_apply: Whether to apply the change immediately(defaults to false)
 
     if request.args.get("method") in [None, "set"]:
         value_type = str if not is_number(request.args.get("value")) else int if float(request.args.get("value")) % 1 == 0 else float 
         common.config[request.args.get("key")] = request.args.get('value', type=value_type)
+        if request.args.get("instant_apply") == "true":
+            sniper.config[request.args.get("key")] = request.args.get('value', type=value_type)
         common.set_config()
         return '""'
     elif request.args.get("method") == "append":
         common.config[request.args.get("key")].append("")
+        if request.args.get("instant_apply") == "true":
+            sniper.config[request.args.get("key")].append("")
         common.set_config()
         return '""'
     elif request.args.get("method") == "index":
         value_type = str if not is_number(request.args.get("value")) else int if float(request.args.get("value")) % 1 == 0 else float 
         index_type = str if not is_number(request.args.get("index")) else int if float(request.args.get("index")) % 1 == 0 else float 
         common.config[request.args.get("key")][request.args.get("index", type=index_type)] = request.args.get("value", type=value_type)
+        if request.args.get("instant_apply") == "true":
+            sniper.config[request.args.get("key")][request.args.get("index", type=index_type)] = request.args.get("value", type=value_type)
         common.set_config()
         return '""'
     elif request.args.get("method") == "remove":
         if request.args.get("index") != None:
             index_type = str if not is_number(request.args.get("index")) else int if float(request.args.get("index")) % 1 == 0 else float 
             del common.config[request.args.get("key")][request.args.get("index", type=index_type)]
+            if request.args.get("instant_apply") == "true":
+                del sniper.config[request.args.get("key")][request.args.get("index", type=index_type)]
         else:
             del common.config[request.args.get("key")]
+            if request.args.get("instant_apply") == "true":
+                del sniper.config[request.args.get("key")]
         common.set_config()
         return '""'
     else:
@@ -241,7 +248,7 @@ def ping():
 @app.route("/kill", methods=["POST"])
 def kill():
     Thread(target=_kill).start()
-    subprocess.Popen(["python", "main.py", "1"], close_fds=True)
+    subprocess.Popen([f"python{'' if shutil.which('python') != None else '3'}", "main.py", "1"], close_fds=True)
     return Response('""', status=202)
 
 @app.route("/set_ND", methods=["POST"])
@@ -276,7 +283,7 @@ def is_number(s):
 def _kill():
     sleep(0.1)
     log.debug("Rekting")
-    os._exit(1)
+    os.kill(os.getpid(), signal.SIGINT)
 
 def network_dex_pair_valid(network, dex):
     try:
@@ -291,4 +298,9 @@ def init(is_reset):
         sleep(1)
     else:
         webbrowser.open("http://127.0.0.1:9545")
-    app.run(host="127.0.0.1", port=PORT)
+    try:
+        app.run(host="127.0.0.1", port=PORT)
+    except KeyboardInterrupt:
+        log.info("Got interrupt, cleaning up")
+        sniper.set_trades()
+        log.info("Bye!")
