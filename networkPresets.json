@@ -1,4 +1,7 @@
 {
+    "global": {
+        "hp_screener_bytecode": "0x"
+    },
     "networks": {
         "ropsten": {
             "name": "Ethereum Ropsten Testnet",
@@ -8,7 +11,9 @@
             "hp_screener": "0x28Ab1631D58b55f38a157c38F7cd2d7A058f6F76",
             "eip1559": true,
             "explorer": "https://ropsten.etherscan.io",
-            "tick": "TETH"
+            "tick": "TETH",
+            "cgApi": "ethereum",
+            "chainId": 3
         },
         "bsc_mainnet": {
             "name": "BSC Mainnet",
@@ -18,7 +23,9 @@
             "hp_screener": "0xa4edB62C8Dcef79b3BB1deE9B90bc981eDA0a4f2",
             "eip1559": false,
             "explorer": "https://bscscan.com",
-            "tick": "BNB"
+            "tick": "BNB",
+            "cgApi": "binancecoin",
+            "chainId": 56
         },
         "ftm_mainnet": {
             "name": "Fantom Mainnet",
@@ -28,7 +35,9 @@
             "hp_screener": "0xa8683fDF6Ef688A41dECC95b6274D25959B6ccC5",
             "eip1559": false,
             "explorer": "https://ftmscan.com",
-            "tick": "FTM"
+            "tick": "FTM",
+            "cgApi": "fantom",
+            "chainId": 250
         },
         "cronos_mainnet": {
             "name": "Cronos Mainnet",
@@ -38,7 +47,9 @@
             "hp_screener": "0xa8683fDF6Ef688A41dECC95b6274D25959B6ccC5",
             "eip1559": false,
             "explorer": "https://cronoscan.com",
-            "tick": "CRO"
+            "tick": "CRO",
+            "cgApi": "crypto-com-chain",
+            "chainId": 25
         },
         "avax_mainnet": {
             "name": "Avalanche Mainnet", 
@@ -48,7 +59,9 @@
             "hp_screener": "0xa8683fDF6Ef688A41dECC95b6274D25959B6ccC5",
             "eip1559": true,
             "explorer": "https://snowtrace.io",
-            "tick": "AVAX"
+            "tick": "AVAX",
+            "cgApi": "avalanche-2",
+            "chainId": 43114
         },
         "moonbeam_mainnet": {
             "name": "Moonbeam Mainnet",
@@ -58,7 +71,9 @@
             "hp_screener": "0xa8683fDF6Ef688A41dECC95b6274D25959B6ccC5",
             "eip1559": false,
             "explorer": "https://moonscan.io/",
-            "tick": "GLMR"
+            "tick": "GLMR",
+            "cgApi": "moonbeam",
+            "chainId": 1284
         }
     },
     "dexes": {
