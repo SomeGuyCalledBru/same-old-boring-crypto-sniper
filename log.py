@@ -1,5 +1,6 @@
 import logging
 import json
+from datetime import datetime
 import colorama; colorama.init()
 # Thank you SA ❤️
 class CustomFormatter(logging.Formatter):
@@ -35,6 +36,8 @@ ch = logging.StreamHandler()
 ch.setLevel(10)
 ch.setFormatter(CustomFormatter())
 log.addHandler(ch)
-fh = logging.FileHandler('debug.log')
+now = datetime.now()
+date = now.strftime("%Y-%m-%d")
+fh = logging.FileHandler(f'{date}-debug.log')
 fh.setLevel(logging.DEBUG)
 log.addHandler(fh)
