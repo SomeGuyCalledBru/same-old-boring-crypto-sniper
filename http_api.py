@@ -9,13 +9,14 @@ try:
     import common
     import sniperlib
     import scrapelib
+    import re
 except Exception as e:
     print(f"CRITICAL: An error occurred during start-up. Message: \n{format_exc()}\n Make sure that your configuration is correct and you have necessary libraries installed.\nIf you're sure everything is right, open an issue over at GitHub")
 DECIMALS_CACHE = {}
+VALIDATION_CACHE = {}
 PARAMS_CONVERTED = False
 PORT = 9545
 PRIVATE_INFORMATION = ["privateKey", "telegramApi"]
-log = common.log
 app = Flask(__name__)
 sniper = sniperlib.sniper
 scraper = scrapelib.scraper
@@ -27,18 +28,31 @@ def index():
 def main(path):
     return send_from_directory("public", path)
 
+@app.route("/pingRpc")
+def ping_rpc():
+    try:
+        if request.args.get("rpcUrl"):
+            web3 = Web3(Web3.HTTPProvider(request.args.get("rpcUrl")))
+            cid = web3.eth.chain_id
+            common.log.info(f"Chain ID: {cid}")
+            if cid != sniper.chain_id:
+                raise Exception(f"This RPC isn't for this network. (CID: Expected {sniper.chain_id}, got {cid})")
+        return '"OK"'
+    except Exception as e:
+        return f'"{e}"', 400
+        
 @app.route("/allNetworks")
 def networks():
     return json.dumps(common.network_presets)
 
 @app.route("/network")
 def network():
-    result = common.config["network"]
+    result = sniper.config["network"]
     return json.dumps(result)
 
 @app.route("/dex")
 def dex():
-    result = common.config["dex"]
+    result = sniper.config["dex"]
     return json.dumps(result)
 
 @app.route("/txReceipt/<hash>")
@@ -51,24 +65,19 @@ def tx_receipt(hash):
 
 @app.route("/getConfig")
 def get_config():
-    return json.dumps(common.config)
+    return json.dumps(sniper.config)
 
 @app.route("/isCoreConfigured")
 def is_configured_core():
-    return json.dumps(bool(common.config["address"]) and bool(common.config["privateKey"]))
+    return json.dumps(bool(int(sniper.config["address"], 16)) and bool(int(sniper.config["privateKey"], 16)))
 
 @app.route("/isTGConfigured")
 def is_tg_configured():
-    log.debug(f'{bool(common.config["telegramApi"][0]) and bool(common.config["telegramApi"][1])}')
-    return 'true' if bool(common.config["telegramApi"][0]) and bool(common.config["telegramApi"][1]) else 'false'
+    return 'true' if bool(sniper.config["telegramApi"]["API_ID"]) and bool(sniper.config["telegramApi"]["API_HASH"]) else 'false'
 
 @app.route("/isDeployed")
 def is_deployed():
     return json.dumps(common.main_contract != "0x0000000000000000000000000000000000000000")
-
-@app.route("/simulate/<address>")   
-def simulate(address):
-    return json.dumps(sniper.simulate(address, sniper.AMOUNT_TO_USE))
 
 @app.route("/decs/<address>")
 def decimals(address):
@@ -82,18 +91,15 @@ def decimals(address):
 
 @app.route("/getSimulationsAndTrades")  
 def get_simulations():
-    return json.dumps({'simulations': sniper.simulations, 'trades': sniper.trades})
+    return json.dumps({'simulations': sniper.simulations, 'trades': sniper.trades, 'price': sniper.ticker_price})
 
 @app.route("/getBalance/<address>")
 def get_balance(address):
     return json.dumps(sniper.get_token_balance(address))
-
+    
 @app.route("/getScrapeState/<_scraper>")
 def get_scrape_state(_scraper):
-    if _scraper == "c":
-        return json.dumps(scraper.c)
-    elif _scraper == "t":
-        return json.dumps(scraper.t)
+    return json.dumps(scraper.toggles[_scraper])
 
 @app.route("/baseGas")
 def base_gas():
@@ -103,23 +109,73 @@ def base_gas():
 def get_params():
     return json.dumps({
         "amountUsed": sniper.config["AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"][sniper.config["network"]],
-        "gasParams": sniper.config["GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"][sniper.config["network"]]
+        "gasParams": sniper.config["GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT"][sniper.config["network"]],
+        "amountUnit": sniper.config["amountUnit"][sniper.config["network"]]
     })
 
+@app.route("/mempoolCompatible")
+def mempool_compatible():
+    return json.dumps(sniper.txpool_support)
+
+@app.route("/getOutput")
+def get_output():
+    return json.dumps(sniper.get_output(Web3.toChecksumAddress(request.args.get("address").replace(' ', '')), request.args.get("side"), request.args.get("amount", type=int)))
+
+@app.route("/getPrice")
+def get_price():
+    return json.dumps(sniper.get_price(Web3.toChecksumAddress(request.args.get("address").replace(' ', '')), request.args.get("is_usd") == "true", request.args.get("decimals", type=int)))
+
+@app.route("/createOrder", methods=["POST"])
+def create_order():
+    if request.args.get("orderType") == "limit":
+        sniper.set_limit(Web3.toChecksumAddress(request.args.get("address").replace(' ', '')), request.args.get("side"), request.args.get("type"), request.args.get("amount", type=float), request.args.get("amount_unit"), request.args.get("price", type=float), request.args.get("price_unit"))
+    elif request.args.get("orderType") == "market":
+        sniper.set_market(Web3.toChecksumAddress(request.args.get("address").replace(' ', '')), request.args.get("side"), request.args.get("amount", type=float), request.args.get("amount_unit"))
+    elif request.args.get("orderType") == "stdSnipe":
+        sniper.start_snipe(Web3.toChecksumAddress(request.args.get("address").replace(' ', '')), "stdSnipe", request.args.get("amount", type=float), request.args.get("amount_unit"), initiator="standard snipe")
+    elif request.args.get("orderType") == "memSnipe":
+        if sniper.txpool_support:
+            sniper.start_snipe(Web3.toChecksumAddress(request.args.get("address").replace(' ', '')), "memSnipe", request.args.get("amount", type=float), request.args.get("amount_unit"), initiator="mempool snipe", rules=json.loads(request.args.get("rules")))    
+        else:
+            return '"Mempool not supported"', 400
+    return '""'
+
+@app.route("/deleteLimitOrder", methods=["POST"])
+def delete_limit_order():
+    sniper.delete_limit(int(request.args.get("index")))
+
+@app.route("/validateContractAddress")
+def validate_contract_address():
+    global VALIDATION_CACHE
+    try:
+        return VALIDATION_CACHE[Web3.toChecksumAddress(request.args.get("address").replace(' ', ''))]
+    except KeyError:
+        common.log.info(f"Cache for {Web3.toChecksumAddress(request.args.get('address').replace(' ', ''))} not found. Validating...")
+        try: 
+            sniper.get_token_balance(Web3.toChecksumAddress(request.args.get("address").replace(' ', '')))
+            VALIDATION_CACHE[Web3.toChecksumAddress(request.args.get("address").replace(' ', ''))] = 'true'
+            common.log.info(f"{Web3.toChecksumAddress(request.args.get('address').replace(' ', ''))} is a valid token address.")
+            return 'true'
+        except Exception as e:
+            VALIDATION_CACHE[Web3.toChecksumAddress(request.args.get("address").replace(' ', ''))] = 'false'
+            common.log.info(f"{Web3.toChecksumAddress(request.args.get('address').replace(' ', ''))} is not a valid token address.")
+            return 'false'
+    except ValueError:
+        # This means the address is invalid, don't cache anything and return false
+        return 'false'
 @app.route("/setParams", methods=["POST"])
 def set_params():
-    AMOUNT_TO_USE = int(round(float(request.args.get('amount_used'))))
+    AMOUNT_TO_USE = float(request.args.get("amount_used"))
+    AMOUNT_UNIT = request.args.get("amount_unit")
     GAS_PARAMS = json.loads(request.args.get('gas_params'))
     GAS_PARAMS[0] = int(round(float(GAS_PARAMS[0])))
-    if None in GAS_PARAMS or AMOUNT_TO_USE == None:
+    if None in GAS_PARAMS:
         return Response('"Fields cannot be empty"', status=400)
     if GAS_PARAMS[1] < 50000:
         return Response('"Gas limit cannot be below 50K"', status=400)
     if GAS_PARAMS[0] < sniper.base_gas_price and not GAS_PARAMS[2]:
         return Response('"Gas price cannot be below base without adaptive gas enabled"', status=400)
-    if AMOUNT_TO_USE == 0:
-        return Response('"Amount cannot be zero"', status=400)
-    sniper.set_params(AMOUNT_TO_USE, GAS_PARAMS)
+    sniper.set_params(AMOUNT_TO_USE, GAS_PARAMS, AMOUNT_UNIT)
     return '""'
 
 @app.route("/setMisc", methods=["POST"])
@@ -133,36 +189,26 @@ def set_misc():
 
     if request.args.get("method") in [None, "set"]:
         value_type = str if not is_number(request.args.get("value")) else int if float(request.args.get("value")) % 1 == 0 else float 
-        common.config[request.args.get("key")] = request.args.get('value', type=value_type)
-        if request.args.get("instant_apply") == "true":
-            sniper.config[request.args.get("key")] = request.args.get('value', type=value_type)
-        common.set_config()
+        sniper.config[request.args.get("key")] = request.args.get('value', type=value_type)
+        sniper.set_config()
         return '""'
     elif request.args.get("method") == "append":
-        common.config[request.args.get("key")].append("")
-        if request.args.get("instant_apply") == "true":
-            sniper.config[request.args.get("key")].append("")
-        common.set_config()
+        sniper.config[request.args.get("key")].append("")
+        sniper.set_config()
         return '""'
     elif request.args.get("method") == "index":
         value_type = str if not is_number(request.args.get("value")) else int if float(request.args.get("value")) % 1 == 0 else float 
         index_type = str if not is_number(request.args.get("index")) else int if float(request.args.get("index")) % 1 == 0 else float 
-        common.config[request.args.get("key")][request.args.get("index", type=index_type)] = request.args.get("value", type=value_type)
-        if request.args.get("instant_apply") == "true":
-            sniper.config[request.args.get("key")][request.args.get("index", type=index_type)] = request.args.get("value", type=value_type)
-        common.set_config()
+        sniper.config[request.args.get("key")][request.args.get("index", type=index_type)] = request.args.get("value", type=value_type)
+        sniper.set_config()
         return '""'
     elif request.args.get("method") == "remove":
         if request.args.get("index") != None:
             index_type = str if not is_number(request.args.get("index")) else int if float(request.args.get("index")) % 1 == 0 else float 
-            del common.config[request.args.get("key")][request.args.get("index", type=index_type)]
-            if request.args.get("instant_apply") == "true":
-                del sniper.config[request.args.get("key")][request.args.get("index", type=index_type)]
+            del sniper.config[request.args.get("key")][request.args.get("index", type=index_type)]
         else:
-            del common.config[request.args.get("key")]
-            if request.args.get("instant_apply") == "true":
-                del sniper.config[request.args.get("key")]
-        common.set_config()
+            del sniper.config[request.args.get("key")]
+        sniper.set_config()
         return '""'
     else:
         return Response('"Invalid instruction"', status=400)
@@ -177,14 +223,12 @@ def delete_trade(side, index):
     sniper.delete_trade(side, int(index))
     return '""'
 
-@app.route("/createLimitOrder/<index>/<price>/<amount>", methods=["POST"])
-def create_limit_order(index, price, amount):
-    return json.dumps(sniper.set_limit(int(index), float(price), float(amount)))
-
-@app.route("/deleteLimitOrder/<trade_index>/<limit_index>", methods=["POST"])
-def delete_limit_order(trade_index, limit_index):
-    sniper.delete_limit(int(trade_index), int(limit_index))
-    return '""'
+@app.route("/validateMethodID")
+def validate_method_id():
+    if re.match(r"0x[0-9a-fA-F]{8}", request.args.get("method_id")):
+        return "true"
+    else:
+        return "false"
 
 @app.route("/restoreTrade/<address>", methods=["POST"])
 def restore_trade(address):
@@ -192,49 +236,22 @@ def restore_trade(address):
     sniper.restore_trade(address)
     return '""'
 
-@app.route("/startSimulating/<address>", methods=["POST"])
-def start_simulating(address):
-    sniper.start(address, "manual input")
-    return Response('""', status=202)
-
-@app.route("/stopSimulating/<address>", methods=["POST"])
-def stop_simulating(address):
-    sniper.stop(address)
+@app.route("/stopSimulating/<ident>", methods=["POST"])
+def stop_simulating(ident):
+    sniper.stop_standard_snipe(ident)
     return Response('""', status=200)
 
 @app.route("/toggleScrape/<_scraper>", methods=["POST"])
 def toggle_scrape(_scraper):
-    if _scraper == "c":
-        scraper.toggle_C()
-    elif _scraper == "t":
-        scraper.toggle_T()
+    scraper.toggle(_scraper)
     return '""'
-
-@app.route("/buy", methods=["POST"])
-def buy():
-    """
-    Buys token with provided parameters.
-    Parameters:
-    address[REQUIRED]: Address for token. 
-    """
-    if not request.args.get("address"):
-        return '"Invalid request: required params missing"'
-    return json.dumps(str(sniper.swap(Web3.toChecksumAddress(request.args.get("address").replace(" ", "")), "buy", Web3.toWei(sniper.AMOUNT_TO_USE, 'ether'), sniper.GAS_PARAMS, initiator="manual buy")))
-
-@app.route("/sell", methods=["POST"])
-def sell():
-    """
-    Sells token with provided parameters.
-    address[REQUIRED]: Address for token. 
-    amount_in[Optional]: Amount to sell. Everything is sold if unspecified.
-    """
-    if not request.args.get("address"):
-        return '"Invalid request: required params missing"'
-    return json.dumps(str(sniper.swap(Web3.toChecksumAddress(request.args.get("address").replace(" ", "")), "sell", request.args.get("amount_in", type=float), sniper.GAS_PARAMS, initiator="manual sell")))
-
+    
 @app.route("/pnl", methods=["GET"])
 def pnl():
-    return json.dumps(sniper.pnl(request.args.get("address"), request.args.get('in', type=int), request.args.get('out', type=int)))
+    result = sniper.address_only_pnl(Web3.toChecksumAddress(request.args.get("address").replace(" ", "")))
+    if result == None:
+        return "false", 400
+    return json.dumps(result)
 
 @app.route("/ping", methods=["GET"])
 def ping():
@@ -248,16 +265,18 @@ def ping():
 @app.route("/kill", methods=["POST"])
 def kill():
     Thread(target=_kill).start()
-    subprocess.Popen([f"python{'' if shutil.which('python') != None else '3'}", "main.py", "1"], close_fds=True)
+    subprocess.Popen([f"python{'' if shutil.which('python') != None else '3'}", "main.py", "restart"], close_fds=True)
     return Response('""', status=202)
 
 @app.route("/set_ND", methods=["POST"])
 def set_network_and_dex():
+    global VALIDATION_CACHE, DECIMALS_CACHE
     if not network_dex_pair_valid(request.args.get("network"), request.args.get("dex")):
         return Response('"Invalid network-dex pair"', status=400)
-    common.config["network"] = request.args.get("network")
-    common.config["dex"] = request.args.get("dex")
-    common.set_config()
+    sniper.reinit(request.args.get("network"), request.args.get("dex"))
+    # Clear cache to avoid conflicts
+    VALIDATION_CACHE = {}
+    DECIMALS_CACHE = {}
     return '""'
 
 @app.errorhandler(404)
@@ -282,7 +301,7 @@ def is_number(s):
         
 def _kill():
     sleep(0.1)
-    log.debug("Rekting")
+    common.log.debug("Rekting")
     os.kill(os.getpid(), signal.SIGINT)
 
 def network_dex_pair_valid(network, dex):
@@ -301,6 +320,6 @@ def init(is_reset):
     try:
         app.run(host="127.0.0.1", port=PORT)
     except KeyboardInterrupt:
-        log.info("Got interrupt, cleaning up")
+        common.log.info("Got interrupt, cleaning up")
         sniper.set_trades()
-        log.info("Bye!")
+        common.log.info("Bye!")

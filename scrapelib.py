@@ -5,50 +5,47 @@ from time import sleep
 from web3 import Web3
 from telethon import TelegramClient, events
 import asyncio
-from common import log, config
+from common import log
 class Scraper:
 
     def __init__(self) -> None:
-        self.c = False
-        self.t = False
+        self.toggles = {"c": False, "t": False}
         Thread(target=self.clipboard).start()
         Thread(target=self.telegram).start()
 
-    def toggle_C(self):
-        self.c = not self.c
-    
-    def toggle_T(self):
-        self.t = not self.t
+    def toggle(self, scraper):
+        self.toggles[scraper] = not self.toggles[scraper]
     
     def clipboard(self):
         previous = ""
         current = ""
         address = ""
         while True:
-            if self.c:
+            if self.toggles["c"]:
                 current = pyperclip.paste()
                 if previous != current:
                     address = self.parse(current)
                     if address != None and address != "":
-                        sniper.start(address, "clipboard scraper")
+                        sniper.start_snipe(address, type="stdSnipe", initiator="clipboard scraper")
                     previous = current
             sleep(0.01)
 
     def telegram(self):
+        # Left off here: Test it
         try:
-            client = TelegramClient('anon', config["telegramApi"][0], config["telegramApi"][1], loop=asyncio.set_event_loop(asyncio.new_event_loop()))
+            client = TelegramClient('anon', sniper.config["telegramApi"]["API_ID"], sniper.config["telegramApi"]["API_HASH"], loop=asyncio.set_event_loop(asyncio.new_event_loop()))
         except Exception as e:
-            log.warning("Invalid TG api creds! Disabling TG by crashing thread lol")
+            log.warning("Invalid TG api creds! Disabling TG by crashing thread")
             raise ValueError("Telegram API credentials invalid")
-        @client.on(events.NewMessage(chats=config["telegramScrapedGroups"]))
+        @client.on(events.NewMessage(chats=sniper.config["telegramScrapedGroups"]))
         async def on_message(ctx):
-            if self.t:
+            if self.toggles["t"]:
                 addr = self.parse(ctx.raw_text)
                 if addr == None:
                     log.warn("No CA found in message!")
                     pass
                 else:
-                    sniper.start(addr, "Telegram scraper")
+                    sniper.start_snipe(addr, type="stdSnipe", initiator="Telegram scraper")
         client.start()
         client.run_until_disconnected()
 

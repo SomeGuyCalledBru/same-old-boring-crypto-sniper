@@ -1,14 +1,14 @@
-import http_api
+import http_api, common
 import sys
 try:
-    if sys.argv[1] != '1':
-        is_reset = "dont_start"
-    else:
-        is_reset = True
+    startup_mode = sys.argv[1] if sys.argv[1] in ["standard", "restart", "telegram"] else "standard"
 except IndexError:
-    is_reset = False
+    startup_mode = "standard"
 if __name__ == "__main__":
-    if is_reset != "dont_start":
-        http_api.init(is_reset=is_reset)
-    else:
-        http_api.log.setLevel(50)
+    if startup_mode == "standard":
+        http_api.init(is_reset=False)
+    elif startup_mode == "restart":
+        http_api.init(is_reset=True)
+    elif startup_mode == "telegram":
+        # Don't start HTTP API&silence logs to let user enter info
+        common.log.setLevel(50)
