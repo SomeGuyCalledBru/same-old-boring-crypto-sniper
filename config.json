@@ -1,23 +1,38 @@
 {
     "privateKey": "0000000000000000000000000000000000000000000000000000000000000000",
     "address": "0x0000000000000000000000000000000000000000",
-    "telegramApi": [
-        0,
-        ""
-    ],
+    "telegramApi": {
+        "API_ID": 0,
+        "API_HASH": ""
+    },
     "network": "bsc_mainnet",
     "dex": "pancakeswap_v2",
-    "rpcUrl": "",
+    "rpcUrl": {
+        "ropsten": "",
+        "bsc_mainnet": "",
+        "ftm_mainnet": "",
+        "cronos_mainnet": "",
+        "avax_mainnet": "",
+        "moonbeam_mainnet": ""
+    },
     "telegramScrapedGroups": [],
     "simulationTaxLimitPercent": 50,
     "intervalBetweenSimulationsMs": 500,
     "AMOUNT_TO_USE_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT": {
-        "ropsten": 10000000000000000,
-        "bsc_mainnet": 10000000000000000,
-        "ftm_mainnet": 5000000000000000000,
-        "cronos_mainnet": 5000000000000000000,
-        "avax_mainnet": 50000000000000000,
-        "moonbeam_mainnet": 1000000000000000000
+        "ropsten": 0.1,
+        "bsc_mainnet": 0.01,
+        "ftm_mainnet": 1,
+        "cronos_mainnet": 2,
+        "avax_mainnet": 0.05,
+        "moonbeam_mainnet": 0.1
+    },
+    "amountUnit": {
+        "ropsten": "nativeToken",
+        "bsc_mainnet": "nativeToken",
+        "ftm_mainnet": "nativeToken",
+        "cronos_mainnet": "nativeToken",
+        "avax_mainnet": "nativeToken",
+        "moonbeam_mainnet": "nativeToken"
     },
     "GAS_PARAMETERS_DO_NOT_MODIFY_IT_HERE_OR_YOU_WILL_GET_REKT": {
         "ropsten": [
