@@ -106,8 +106,12 @@ class Sniper:
         if type == "stdSnipe":
             try:
                 amount_for_simulation = self.calculate_amount(address, "buy", amount, amount_unit)
+                initial_iteration = True # Speed up the first iteration
                 while True:
-                    sleep(self.config["intervalBetweenSimulationsMs"]/1000)
+                    if initial_iteration:
+                        initial_iteration = False
+                    else:
+                        sleep(self.config["intervalBetweenSimulationsMs"]/1000)
                     result = self.simulate(address, amount_for_simulation)
                     if result:
                         break
@@ -222,6 +226,8 @@ class Sniper:
         common.log.debug(f"(ConstructTx) completed in {round(time()-start_time, 2)} seconds")
         start_time = time()
         full_calldata = self.contract.encodeABI(fn_name="swap", args=[self.dex["router"], calldata, path[0], path[-1], side == "sell"])
+        common.log.debug(f"(EncodeABI) completed in {round(time()-start_time, 2)} seconds")
+        start_time = time()
         tx_data["data"] = full_calldata
         signed_transaction = common.w3.eth.account.sign_transaction(tx_data, self.config["privateKey"])
         common.log.debug(f"(BuildAndSign) completed in {round(time()-start_time, 2)} seconds")
@@ -263,6 +269,7 @@ class Sniper:
                     common.log.error(f"Error in update_txpool: {e}")
                     sleep(10)
             sleep(0.25)
+            
     def construct_tx_dict(self, gas_limit, gas_price, value, adaptive_gas, to): 
         """Returns a full transaction data dictionary from config and parameters."""
         result = {
