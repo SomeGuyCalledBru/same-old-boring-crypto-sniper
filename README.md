@@ -1,6 +1,8 @@
-# same-old-boring-crypto-sniper
 
+# same-old-boring-crypto-sniper
 The title is enough of an explanation for what it is, I won't delve deeper in that.
+
+## This project is going closed source on next release - reasons will be explained when the release actually happens.
 
 ## Disclaimer
 It is your responsibility and choice that you're using this. You may lose money due to just crypto being crypto, or unexpected bugs. I won't be responsible in that case-nobody is forcing you to use this.  
